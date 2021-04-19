@@ -21,9 +21,24 @@ int main()
   }
 
   if ((semid = semget(key, 1, 0666 | IPC_CREAT)) < 0) {
-    printf("Can\'t create semaphore set\n");
-    exit(-1);
-  }
+printf("Can\'t get semid\n");
+exit(-1);
+}
+
+
+int clear_res = semctl(semid, 0, IPC_RMID, 0);
+
+
+if (clear_res == -1) {
+
+printf("Can\'t clear pipe\n");
+exit(-1);
+}
+
+if ((semid = semget(key, 1, 0666 | IPC_CREAT)) < 0) {
+printf("Can\'t get semid\n");
+exit(-1);
+}
 
   printf("Enter N:");
   scanf("%d",&N);
@@ -34,7 +49,6 @@ int main()
     exit(-1);
   }
 
-  result = fork();
 
   mybuf.sem_num = 0;
   mybuf.sem_op  = 1;
@@ -44,6 +58,8 @@ int main()
     printf("Can\'t wait for condition\n");
     exit(-1);
   }
+
+  result = fork();
 
   if (result < 0) {
     printf("Can\'t fork child\n");
@@ -57,15 +73,14 @@ int main()
         }
     
         size = write(fd[1], "Hello, world!", 14);
-    
         if (size != 14) {
           printf("Can\'t write all string to pipe (parent)\n");
           exit(-1);
         }
     
-        //if (close(fd[1]) < 0) {
-        //  printf("parent: Can\'t close writing side of pipe\n"); exit(-1);
-        //}
+        if (close(fd[1]) < 0) {
+          printf("parent: Can\'t close writing side of pipe\n"); exit(-1);
+        }
     
         printf("Parent wrote\n");
 
@@ -86,6 +101,7 @@ int main()
         mybuf.sem_num = 0;
         mybuf.sem_op  = 0;
         mybuf.sem_flg = 0;
+
         if (semop(semid, &mybuf, 1) < 0) {
           printf("Can\'t wait for condition\n");
           exit(-1);
@@ -123,24 +139,11 @@ int main()
         }
     
         printf("Child read, resstring:%s\n", resstring);
-    
+
+        
         if (close(fd[0]) < 0) {
           printf("child: Can\'t close reading side of pipe\n"); exit(-1);
         }
-
-
-        size = write(fd[1], "Hello, world!", 14);
-    
-        if (size != 14) {
-          printf("Can\'t write all string to pipe (child)\n");
-          exit(-1);
-        }
-    
-        if (close(fd[1]) < 0) {
-          printf("child: Can\'t close writing side of pipe\n"); exit(-1);
-        }
-
-        printf("Child wrote\n");
 
         mybuf.sem_num = 0;
         mybuf.sem_op  = -1;
@@ -156,6 +159,22 @@ int main()
           printf("Can\'t wait for condition\n");
           exit(-1);
         }
+
+        size = write(fd[1], "Hello, world!", 14);
+
+        if (size != 14) {
+          printf("Can\'t write all string to pipe (child)\n");
+          exit(-1);
+        }
+    
+        if (close(fd[1]) < 0) {
+          printf("child: Can\'t close writing side of pipe\n"); exit(-1);
+        }
+        printf("Child wrote\n");
+        
+
+    
+      
         mybuf.sem_num = 0;
         mybuf.sem_op  = 0;
         mybuf.sem_flg = 0;
